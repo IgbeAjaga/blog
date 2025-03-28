@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\StorePostRequest;
 use App\Models\Post;
 
 class PostController extends Controller
@@ -12,21 +12,37 @@ class PostController extends Controller
      */
     public function index()
     {
-        return response()->json(Post::paginate(10));
-    }
+        $posts = Post::paginate(10);
+    
+        return response()->json([
+            'data' => $posts->items(),
+            'meta' => [
+                'current_page'  => $posts->currentPage(),
+                'last_page'     => $posts->lastPage(),
+                'per_page'      => $posts->perPage(),
+                'total'         => $posts->total(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'prev_page_url' => $posts->previousPageUrl(),
+            ]
+        ]);
+    }    
 
     /**
      * Store a new post.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'body' => 'required|string'
-        ]);
+    public function store(StorePostRequest $request)
+{
+    $user = auth()->user();
 
-        $post = auth()->user()->posts()->create($request->all());
+    $validatedData = $request->validated();
 
-        return response()->json($post, 201);
-    }
+    $post = new Post($validatedData);
+    $post->user_id = $user->id;
+    $post->save();
+
+    return response()->json([
+        'message' => 'Post created successfully',
+        'post'    => $post
+    ], 201);
+}
 }

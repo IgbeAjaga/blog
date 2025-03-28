@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -12,21 +13,14 @@ class AuthController extends Controller
     /**
      * Handle user registration.
      */
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6'
-        ]);
-
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password)
         ]);
 
-        
         $token = $user->createToken('API Token')->plainTextToken;
 
         return response()->json([
@@ -39,32 +33,28 @@ class AuthController extends Controller
     /**
      * Handle user login.
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->only('email', 'password');
-
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
         
         $user = Auth::user();
-        
         $token = $user->createToken('API Token')->plainTextToken;
 
         return response()->json([
             'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user
+            'user' => $user,
+            'token' => $token
         ]);
     }
 
     /**
      * Handle user logout.
      */
-    public function logout(Request $request)
+    public function logout()
     {
-        
-        $request->user()->tokens()->delete();
+        auth()->user()->tokens()->delete();
 
         return response()->json([
             'message' => 'Logged out successfully'
